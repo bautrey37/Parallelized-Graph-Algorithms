@@ -1,0 +1,29 @@
+Methods to Code Parallel Graph Algorithms
+	- we'll create parallelized implementations of graphing algorithms
+		- get serial examples, then write our own, and benchmark both
+		- get parallelized examples, then write our own, and benchmark both
+			***(don't forget citations for the ones we research and find elsewhere)***
+			
+We have explicitly chosen SPECIFICALLY (EXCLUSIVELY) the realm of SEARCH algorithms.
+
+INTRODUCTION - We mention why we chose graph algorithms as our topic
+						- because graph algorithms and graphs in general are used in all sorts of jobs
+						- mention current research and publicly known benchmarks over serial counterparts
+						- we will be focusing on how to convert serial graphing algorithms to parallelized ones
+						(going through my code *Anthony*, I will probably mention which portions are critical
+							sections and will cause a sequential bottleneck
+
+(I don't care the order in which we do this, but we should
+discuss the sense of order from one algorithm to the next
+- I got dibs on A* unless somebody else decides they
+want to do that portion of the presentation)
+
+Algorithm 1 Discussion
+
+Algorithm 2 Discussion
+
+Algorithm 3 Discussion
+
+CONCLUSION - A recap of the algorithms and how their parallelized versions are different from their
+						serial counterparts, and then a discussion of how our implementations were similar to
+						and differed from publicly known parallelized versions.
