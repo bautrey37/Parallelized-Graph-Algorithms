@@ -1,5 +1,7 @@
 import java.util.*;
 import java.text.*;
+import java.util.concurrent.atomic.AtomicInteger;
+
 
 public class Node implements Comparable<Node> {
 
@@ -12,10 +14,13 @@ public class Node implements Comparable<Node> {
 	private float gDistanceFromStart;
 	private float hDistanceFromGoal;
 	private boolean discovered;
-	private Node prevNode;
+	volatile private Node prevNode;
 	public boolean isStart = false;
 	public boolean isPath = false;
 	public boolean isGoal = false;
+
+	public AtomicInteger startPathFound;
+	public AtomicInteger goalPathFound;
 
 	private Vector2D position;
 
@@ -58,6 +63,10 @@ public class Node implements Comparable<Node> {
 		isStart = false;
 		isPath = false;
 		isGoal = false;
+		
+		// default constructor of AtomicInteger sets value to 0 (zero)
+		startPathFound = new AtomicInteger(0);
+		goalPathFound = new AtomicInteger(0);
 	}
 
 	public int getID() {
