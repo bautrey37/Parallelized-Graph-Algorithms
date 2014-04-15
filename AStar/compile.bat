@@ -1,4 +1,3 @@
 cls
-javac CreateGridGraph.java Graph.java GraphGUI.java Edge.java Node.java
-java CreateGridGraph
+javac CreateGridGraph.java Graph.java GraphGUI.java Node.java
 java GraphGUI

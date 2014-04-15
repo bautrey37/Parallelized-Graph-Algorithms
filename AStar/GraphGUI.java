@@ -1,5 +1,6 @@
 import java.io.*;
 import java.util.*;
+
 import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.BorderLayout;
@@ -30,9 +31,15 @@ public class GraphGUI {
 	public static final int OFFSET = NODE_SIZE/2;	// necessary to put the 'center' of each node in it's center
 
 	public static boolean showNumbers = false;
+	public static boolean showNodes = true;
+	public static boolean showEdges = false;
+	public static boolean showFailedPaths = true;
 	public static boolean calculateAStar = true;
 	public static boolean showAStarPath = true;
 	public static boolean dijkstrasHeuristic = false;
+	
+	Thread startToGoal;
+	Thread goalToStart;
 	
 	private mouseClickListener MCL = new mouseClickListener();
 
@@ -41,18 +48,21 @@ public class GraphGUI {
 	private JFrame frame;
 	private JLabel menuBar, statusBar;
 	private Screen screen;
-	private Graph graph;
+	private volatile Graph graph;
 	private JMenuBar bar;
-	private JMenu fileMenu, nodeMenu, pathFindingMenu;
+	private JMenu fileMenu, nodeMenu, pathFindingMenu, graphMenu;
 	private JMenuItem newGraph, exit,
-		orange, yellow, green, cyan, toggleNodeNums,
-		useDijkstras, changeSource, changeGoal, toggleDrawPath;
+		orange, yellow, green, cyan,
+		showNodesOption, showEdgesOption, failedPathsOption, toggleNodeNums,
+		useDijkstras, changeSource, changeGoal, toggleDrawPath,
+		enterDimensions;
 
 	public final Color OUTLINE_COLOR = Color.black;
 	public Color NODE_COLOR = Color.green;
 	public Color EDGE_COLOR = Color.orange;
 	public Color START_COLOR = Color.blue;
 	public Color GOAL_COLOR = Color.red;
+	public Color DEADPATH_COLOR = Color.red;
 	public Color PATH_COLOR = Color.black;
 	
 	public boolean nodesHavePosition = false;
@@ -194,7 +204,40 @@ public class GraphGUI {
 		});
 		nodeMenu.add(cyan);
 		nodeMenu.addSeparator();
-		
+
+		showNodesOption = new JMenuItem("Show Nodes");
+		showNodesOption.setMnemonic(KeyEvent.VK_N);
+		showNodesOption.setAccelerator(KeyStroke.getKeyStroke(
+				KeyEvent.VK_N, ActionEvent.CTRL_MASK));
+		showNodesOption.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				showNodes = !showNodes;
+				updateGraph();
+			}
+		});
+		nodeMenu.add(showNodesOption);
+		showEdgesOption = new JMenuItem("Show Edges");
+		showEdgesOption.setMnemonic(KeyEvent.VK_E);
+		showEdgesOption.setAccelerator(KeyStroke.getKeyStroke(
+				KeyEvent.VK_E, ActionEvent.CTRL_MASK));
+		showEdgesOption.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				showEdges = !showEdges;
+				updateGraph();
+			}
+		});
+		nodeMenu.add(showEdgesOption);
+		failedPathsOption = new JMenuItem("Show Failed Paths");
+		failedPathsOption.setMnemonic(KeyEvent.VK_F);
+		failedPathsOption.setAccelerator(KeyStroke.getKeyStroke(
+				KeyEvent.VK_F, ActionEvent.CTRL_MASK));
+		failedPathsOption.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				showFailedPaths= !showFailedPaths;
+				updateGraph();
+			}
+		});
+		nodeMenu.add(failedPathsOption);
 		toggleNodeNums = new JMenuItem("Toggle Node Numbers");
 		toggleNodeNums.setMnemonic(KeyEvent.VK_T);
 		toggleNodeNums.setAccelerator(KeyStroke.getKeyStroke(
@@ -218,7 +261,6 @@ public class GraphGUI {
 		        KeyEvent.VK_7, ActionEvent.CTRL_MASK));
 		changeSource.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				//showAStarPath = false;
 				String sourceNum = JOptionPane.showInputDialog(frame, "Please enter the new source node: ", "NEW SOURCE NODE", JOptionPane.INFORMATION_MESSAGE);
 				try {
 					int temp = Integer.parseInt(sourceNum);
@@ -244,7 +286,6 @@ public class GraphGUI {
 		        KeyEvent.VK_8, ActionEvent.CTRL_MASK));
 		changeGoal.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				//showAStarPath = false;
 				String goalNum = JOptionPane.showInputDialog(frame, "Please enter the new goal node: ",
 					"NEW GOAL NODE", JOptionPane.INFORMATION_MESSAGE);
 				try {
@@ -265,7 +306,20 @@ public class GraphGUI {
 		});
 		pathFindingMenu .add(changeGoal);
 		pathFindingMenu.addSeparator();
-		
+
+		useDijkstras = new JMenuItem("Toggle Dijkstra's");
+		useDijkstras.setMnemonic(KeyEvent.VK_D);
+		useDijkstras.setAccelerator(KeyStroke.getKeyStroke(
+				KeyEvent.VK_D, ActionEvent.CTRL_MASK));
+		useDijkstras.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				dijkstrasHeuristic = !dijkstrasHeuristic;
+				assignStartAndGoal(sNodeIndex, gNodeIndex);
+				updateGraph();
+			}
+		});
+		pathFindingMenu.add(useDijkstras);
+
 		toggleDrawPath = new JMenuItem("Toggle Path Drawing");
 		toggleDrawPath.setMnemonic(KeyEvent.VK_T);
 		toggleDrawPath.setAccelerator(KeyStroke.getKeyStroke(
@@ -278,18 +332,64 @@ public class GraphGUI {
 		});
 		pathFindingMenu.add(toggleDrawPath);
 
-		useDijkstras = new JMenuItem("Use Dijkstra's Heuristic");
-		useDijkstras.setMnemonic(KeyEvent.VK_D);
-		useDijkstras.setAccelerator(KeyStroke.getKeyStroke(
-				KeyEvent.VK_D, ActionEvent.CTRL_MASK));
-		useDijkstras.addActionListener(new ActionListener() {
+
+		graphMenu = new JMenu("Create Custom Grid");
+		graphMenu.setMnemonic(KeyEvent.VK_G);
+		bar.add(graphMenu);
+		
+		enterDimensions = new JMenuItem("Enter Grid Dimensions");
+		enterDimensions.setMnemonic(KeyEvent.VK_G);
+		enterDimensions.setAccelerator(KeyStroke.getKeyStroke(
+		        KeyEvent.VK_G, ActionEvent.CTRL_MASK));
+		enterDimensions.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				dijkstrasHeuristic = !dijkstrasHeuristic;
-				assignStartAndGoal(sNodeIndex, gNodeIndex);
-				updateGraph();
+				int rowNum, colNum;
+				String dimensions = JOptionPane.showInputDialog(frame, "Please enter the new # of rows: ", "NEW # OF ROWS", JOptionPane.INFORMATION_MESSAGE);
+				try {
+					rowNum = Integer.parseInt(dimensions);
+					if(rowNum < 0 || rowNum > 100) {
+						JOptionPane.showMessageDialog(frame, "You need to enter an integer between 1-100, for # of rows.",
+							"ERROR!", JOptionPane.INFORMATION_MESSAGE);
+						rowNum = 10;
+					}
+				}
+				catch(NumberFormatException nfe) {
+					JOptionPane.showMessageDialog(frame, "You didn't enter an integer value.",
+						"ERROR!", JOptionPane.INFORMATION_MESSAGE);
+					rowNum = 10;
+				}
+				dimensions = JOptionPane.showInputDialog(frame, "Please enter the new # of columns: ", "NEW # OF COLUMNS", JOptionPane.INFORMATION_MESSAGE);
+				try {
+					colNum = Integer.parseInt(dimensions);
+					if(colNum < 0 || colNum > 100) {
+						JOptionPane.showMessageDialog(frame, "You need to enter an integer between 1-100, for # of rows.",
+							"ERROR!", JOptionPane.INFORMATION_MESSAGE);
+						colNum = 10;
+					}
+				}
+				catch(NumberFormatException nfe) {
+					JOptionPane.showMessageDialog(frame, "You didn't enter an integer value.",
+						"ERROR!", JOptionPane.INFORMATION_MESSAGE);
+					colNum = 10;
+				}
+				new CreateGridGraph(rowNum, colNum);
+				try {
+					graph = new Graph("graphs\\grid.txt");
+					initialize(graph);
+					
+					if(numNodes == 1)
+						menuBar.setText("Your graph has 1 node");
+					else
+						menuBar.setText("Your graph has " + numNodes + " nodes");
+					
+					updateGraph();
+				} catch(FileNotFoundException fnfe) {
+					JOptionPane.showMessageDialog(frame, "This file doesn't exist!",
+						"ERROR!", JOptionPane.INFORMATION_MESSAGE);
+				}
 			}
 		});
-		pathFindingMenu.add(useDijkstras);
+		graphMenu.add(enterDimensions);
 
 		
 		if(numNodes == 1)
@@ -312,6 +412,7 @@ public class GraphGUI {
 		frame.setVisible(true);
 		frame.setSize(522, 600);	// 1024, 576
 		frame.setResizable(false);
+		frame.setLocationRelativeTo( null );
 //		frame.pack();	
 	}
 	
@@ -351,7 +452,9 @@ public class GraphGUI {
 					x[i] = xCoord;
 					double yCoord = graph.nodeList.get(i).getPos().y;
 					y[i] = yCoord;
+
 					
+					g.setColor(PATH_COLOR);
 					if(showNumbers) {
 						if(i < 10) {
 							char[] number = {(char)('0' + i)};
@@ -367,8 +470,6 @@ public class GraphGUI {
 						}
 					}
 				}
-				//drawEdges(g, x, y);
-				//drawNodes(g, x, y);
 			}
 			else {
 				if(numNodes == 0) {
@@ -399,12 +500,13 @@ public class GraphGUI {
 						g.drawChars(number, 0, 1, CENTER, CENTER + 28);
 					}
 					else {
-						for(int i = 0; i < numNodes; i++) {
+						for(int i = 0; i < numNodes; ++i) {
 							angle[i] = (i * angleBetween) - (Math.PI / 2);
 							double xCoord = 256 + calcCenterX(angle[i]);
 							x[i] = xCoord;
 							double yCoord = 256 + calcCenterY(angle[i]);
 							y[i] = yCoord;
+
 
 							if(showNumbers) {
 								if(i < 10) {
@@ -421,21 +523,31 @@ public class GraphGUI {
 								}
 							}
 						}
-						//drawEdges(g, x, y);
-						//drawNodes(g, x, y);
 					}
 				}
 			}
 			if(calculateAStar) {
 				startTime = System.nanoTime();
-				shortestPath = calcAStar(x, y);
+				shortestPath = calcAStar();//x, y);
+				
+				// shortestPath = calcBidirectionalAStar();
+				
 				endTime = System.nanoTime();
-				System.out.println("Execution time: "+
-					((float)(endTime - startTime)/1000000000)+" seconds.");
+				String exTime = "Execution time: "+
+					((float)(endTime - startTime)/1000000000)+" seconds.";
+				statusBar.setText(exTime);
+//				System.out.println(exTime);
 				calculateAStar = false;
 			}
-			drawEdges(g, x, y);
-			drawNodes(g, x, y);
+			if(showEdges) {
+				drawEdges(g, x, y);
+			}
+			if(showNodes) {
+				drawNodes(g, x, y);
+			}
+			if(showFailedPaths) {
+				drawFailedPathEdges(g, x, y);
+			}
 			if(showAStarPath && shortestPath != null) {
 				displayAStarPath(g, x, y);
 			}
@@ -456,8 +568,9 @@ public class GraphGUI {
 		closedNodes = new ArrayList<Node>();
 		shortestPath= new ArrayList<Node>();
 	}
-	
-	public ArrayList<Node> calcAStar(double[] x, double[] y) {
+
+	// currently this is a unidirectional A* search
+	public ArrayList<Node> calcAStar() {
 		startNode.isStart = true;
 		startNode.setG(0);
 		if(dijkstrasHeuristic)
@@ -490,7 +603,6 @@ public class GraphGUI {
 				neighbor.setDiscovered(true);
 
 				if(closedNodes.contains(neighbor)) {
-					//neighbor.setDiscovered(true);
 					continue;
 				}
 
@@ -509,6 +621,60 @@ public class GraphGUI {
 		}
 		return null;
 	}
+	
+	
+/*		public ArrayList<Node> calcBidirectionalAStar(double[] x, double[] y) {
+		startNode.isStart = true;
+		startNode.setG(0);
+		if(dijkstrasHeuristic)
+			startNode.setH(0);
+		else
+			startNode.setH(getDistBetween(startNode, goalNode));
+		startNode.setF(startNode.G() + startNode.H());
+		
+		goalNode.isGoal = true;
+		
+		openNodes.clear();
+		closedNodes.clear();
+		openNodes.add(startNode);
+		
+		while(!openNodes.isEmpty()) {
+			Node current = openNodes.peek();
+
+			if(current.isGoal)
+				return reconstructPath (current);
+
+			current = openNodes.poll();
+			closedNodes.add(current);
+
+			for (Node neighbor : current.returnAdjNodes()) {
+
+				if(dijkstrasHeuristic)
+					neighbor.setH(0);
+				else
+					neighbor.setH(getDistBetween(neighbor, goalNode));
+				neighbor.setDiscovered(true);
+
+				if(closedNodes.contains(neighbor)) {
+					continue;
+				}
+
+				float neighborDistFromStart = current.G() + getDistBetween(current, neighbor);
+
+				if((!openNodes.contains(neighbor)) || 
+						(neighborDistFromStart < neighbor.G())) {
+					neighbor.setPrevNode(current);
+					neighbor.setG(neighborDistFromStart);
+					neighbor.setF(neighbor.G() + neighbor.H());
+					if(!openNodes.contains(neighbor)) {
+						openNodes.add(neighbor);
+					}
+				}
+			}
+		}
+		return null;
+	}	*/
+	
 	
 	public ArrayList<Node> reconstructPath(Node node) {
 		ArrayList<Node> path = new ArrayList<Node>();
@@ -556,6 +722,30 @@ public class GraphGUI {
 		}
 	}
 	
+	public void drawFailedPathEdges(Graphics g, double[] x, double[] y) {
+		for(int i = 0; i < numNodes; i++) {
+			if(graph.nodeList.get(i).hasNoConnections());	// if a node has no connections, no lines are drawn
+			else {
+				for(int j = 0; j < graph.nodeList.get(i).returnAdjNodes().size(); j++) {
+					if(graph.nodeList.get(i).getID() == graph.nodeList.get(i).returnAdjNodes().get(j).getID());
+					else {
+						if(graph.nodeList.get(i).getPrevNode() != null &&
+								graph.nodeList.get(i).getPrevNode().getID() ==
+								graph.nodeList.get(i).returnAdjNodes().get(j).getID()) {
+							g.setColor(DEADPATH_COLOR);
+							int x1, y1, x2, y2;
+							x1 = (int)x[graph.nodeList.get(i).getID()];
+							y1 = (int)y[graph.nodeList.get(i).getID()];
+							x2 = (int)x[graph.nodeList.get(i).returnAdjNodes().get(j).getID()];
+							y2 = (int)y[graph.nodeList.get(i).returnAdjNodes().get(j).getID()];
+							g.drawLine(x1, y1, x2, y2);
+						}
+					}
+				}
+			}
+		}
+	}
+	
 	public void drawNodes(Graphics g, double[] x, double[] y) {
 		for(int i = 0; i < numNodes; i++) {
 			// fill in color of nodes
@@ -567,7 +757,7 @@ public class GraphGUI {
 			g.fillOval((int)x[i]-OFFSET, (int)y[i]-OFFSET, NODE_SIZE, NODE_SIZE);
 
 			// outline of nodes
-			g.setColor(OUTLINE_COLOR);
+			//g.setColor(OUTLINE_COLOR);
 			g.drawOval((int)x[i]-OFFSET, (int)y[i]-OFFSET, NODE_SIZE, NODE_SIZE);
 		}
 	}
@@ -591,7 +781,7 @@ public class GraphGUI {
 					g.setColor(GOAL_COLOR);
 				g.fillOval((int)x1-OFFSET, (int)y1-OFFSET, NODE_SIZE, NODE_SIZE);
 
-				g.setColor(OUTLINE_COLOR);
+				//g.setColor(OUTLINE_COLOR);
 				g.drawOval((int)x1-OFFSET, (int)y1-OFFSET, NODE_SIZE, NODE_SIZE);
 			}
 		}

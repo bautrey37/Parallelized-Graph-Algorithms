@@ -121,7 +121,7 @@ public class CreateGridGraph {
 		}
 	}
 
-	public static void main(String[] args) {
-		new CreateGridGraph(200, 200);
-	}
+//	public static void main(String[] args) {
+//		new CreateGridGraph(50, 50);
+//	}
 }

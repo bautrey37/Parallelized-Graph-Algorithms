@@ -11,7 +11,7 @@ public class Graph {
 	public int startNode;
 	public int goalNode;
 
-	public ArrayList<Node> nodeList;
+	volatile public ArrayList<Node> nodeList;
 
 	public Graph(String fileName) throws FileNotFoundException {
 
