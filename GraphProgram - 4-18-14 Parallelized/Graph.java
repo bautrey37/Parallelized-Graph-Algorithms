@@ -112,7 +112,17 @@ public class Graph {
 		return nodesHavePosition;
 	}
 	
-	public void resetNodes() {
+	public void resetNodes(ArrayList<Integer> indices) {
+		for(Node n : nodeList) {
+			n.reset();
+			Integer index = new Integer(n.getID());
+			if(indices.contains(index)) {
+				n.isObstacle = true;
+			}
+		}
+	}
+	
+	public void resetAndRemoveObstacles() {
 		for(Node n : nodeList) {
 			n.reset();
 		}

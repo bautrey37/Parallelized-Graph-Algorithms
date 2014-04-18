@@ -28,6 +28,7 @@ public class Node implements Comparable<Node> {
 	public boolean isStart = false;
 	public boolean isPath = false;
 	public boolean isGoal = false;
+	public boolean isObstacle = false;
 
 	volatile public AtomicInteger currentThread;
 
@@ -68,6 +69,7 @@ public class Node implements Comparable<Node> {
 		isStart = false;
 		isPath = false;
 		isGoal = false;
+		isObstacle = false;
 
 		currentThread = new AtomicInteger(1);
 	}

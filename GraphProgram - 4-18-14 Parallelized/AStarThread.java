@@ -86,7 +86,7 @@ class AStarThread extends Thread {
 		while(!finished) {
 			Node current = oNodes.poll();
 
-			if(elementOfM(current)) {
+			if(elementOfM(current) && (!current.isObstacle)) {
 //				System.out.println("# of adj nodes: "+current.returnAdjNodes().size());
 				if((current.F(threadNum) < graphProg.L) &&
 						((current.G(threadNum) + otherThread.FLowest -
