@@ -1,0 +1,75 @@
+/*
+ * Bellman-Ford's implementation
+ */
+bool bellman_ford(AdjacencyList<> *graph, unsigned long source, double dist[], std::vector<unsigned long> paths[])
+{
+    unsigned long num_vertices = graph->get_vertex_count();
+
+    // initialize_single_source: shortest path estimate and paths for each vertex
+    for (unsigned long i = 1; i<=num_vertices; ++i)
+    {
+        dist[i] = DBL_MAX;
+        paths[i].clear();
+    }
+    dist[source] = 0;
+    paths[source].push_back(source);
+
+    // algorithm kernel: relax all arcs n-1 times
+    for (unsigned long i = 1; i<num_vertices; ++i)
+    {
+        // iteration is complete if no arc is relaxed
+        bool complete = true;
+        
+        // for each arc (u,v) in E
+        for (unsigned long u = 1; u<=num_vertices; ++u)
+        {
+            Edge* it = graph->get_vertex(u)->get_adjacencies();
+            while (it)
+            {
+                // current adjacency information
+                unsigned long v = it->get_successor()->get_key();
+                double w = it->get_weight();
+
+                // relax arc(u,v)
+                if (dist[u] + w < dist[v])
+                {
+                    dist[v] = dist[u] + w;
+
+                    // saves path: antecessor path + goal vertex (v)
+                    paths[v] = paths[u];
+                    paths[v].push_back(v);
+                    
+                    // as long as any arc gets relaxed, iteration is not complete
+                    complete = false;
+                }
+
+                it = it->get_next();   // next edge
+            }
+        }
+        
+        if (complete)
+            return true;
+    }
+
+    /* check each arc (u,v) in E one more time: if there is any arc leading to a
+     * shorter path after n-1 iterations, then exists a negative-weight cycle
+     */
+    for (unsigned long u = 1; u<=num_vertices; ++u)
+    {
+        Edge* it = graph->get_vertex(u)->get_adjacencies();
+        while (it)
+        {
+            // current adjacency information
+            unsigned long v = it->get_successor()->get_key();
+            double w = it->get_weight();
+
+            // is it possible to relax arc(u,v)?
+            if (dist[u] + w < dist[v])
+                return false;
+
+            it = it->get_next();   // next edge
+        }
+    }
+
+    return true;
+}
