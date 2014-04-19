@@ -831,8 +831,8 @@ public void parallelBidirectionalAStar() {
 
 		startTime = System.nanoTime();
 //		System.out.println("This is printed before the threads run...");
-		startToGoal.run();
-		goalToStart.run();		
+		startToGoal.start();
+		goalToStart.start();		
 		waitForThreads();
 		endTime = System.nanoTime();
 
@@ -979,7 +979,7 @@ public void parallelBidirectionalAStar() {
 			g.fillOval((int)x[i]-OFFSET, (int)y[i]-OFFSET, NODE_SIZE, NODE_SIZE);
 
 			// outline of nodes
-			g.setColor(OUTLINE_COLOR);
+			//g.setColor(OUTLINE_COLOR);
 			g.drawOval((int)x[i]-OFFSET, (int)y[i]-OFFSET, NODE_SIZE, NODE_SIZE);
 		}
 	}

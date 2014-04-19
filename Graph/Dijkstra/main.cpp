@@ -1,8 +1,8 @@
+/*
 #include <iostream>
 #include <set>
 #include <vector>
 
-#include "DijkstraAlgo.h"
 #include "InputData.h"
 
 using namespace std;
@@ -27,9 +27,9 @@ int main()
 	int n = 10; //nxn matrix of data
 	
 	//read or generate input file containing graph data
-	InputData::InputData input = InputData::InputData();
-	int** matrixInput = input.generateData(n);
-	printMatrix(matrixInput, n);
+	//InputData::InputData input = InputData::InputData();
+	//int** matrixInput = input.generateData(n);
+	//printMatrix(matrixInput, n);
 
 	//choose algorithm and which type of priority queue to use
 
@@ -44,3 +44,4 @@ int main()
 	return 0;
 }
 
+*/
