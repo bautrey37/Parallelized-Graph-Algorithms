@@ -1,0 +1,13 @@
+//added by Ryan P. Harrigan
+FILE * fp = fopen("random_terrain_1.txt", "r");
+int arg_width, arg_height;
+int vertexKey;
+fscanf(fp, "%d,%d" &arg_width, &arg_height);
+int** matrix = new int[arg_width][arg_height)];
+for (int i = 0; i < arg_width; i++){
+	for (int j = 0; j < arg_height; j++){
+		fscanf(fp, "%d\n", &weight);
+		matrix[i][j] = weight;
+	}
+}
+fclose(fp);
