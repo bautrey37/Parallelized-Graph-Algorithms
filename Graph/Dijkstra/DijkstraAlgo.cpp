@@ -1,17 +1,30 @@
 #include <omp.h>
-#include<iostream>
+#include <iostream>
+#include <fstream>
 #include <time.h>
 
-#define INFINITY 999
+#define INFINITY 999999
 using namespace std;
+
+class Node {
+public:
+	Node::Node() {
+
+	}
+
+private:
+	float weight;
+};
 
 class Dijkstra {
 private:
-	int adjMatrix[15][15];
-	int predecessor[15], distance[15];
-	bool mark[15]; //keep track of visited node
+	int rows, cols;
+	int** adjMatrix;
+	int* predecessor, *distance;
+	bool* mark; //keep track of visited node
 	int source;
-	int numOfVertices;
+	int vertices = 128;
+
 public:
 	/*
 	* Function read() reads No of vertices, Adjacency Matrix and source
@@ -20,7 +33,7 @@ public:
 	* are always positive. The source vertex must also be positive from 0
 	* to noOfVertices - 1
 	*/
-	void read();
+	int** read();
 	/*
 	* Function initialize initializes all the data members at the begining of
 	* the execution. The distance between source to source is zero and all other
@@ -38,7 +51,7 @@ public:
 	* Function calculateDistance calculates the minimum distances from the source node to
 	* Other node.
 	*/
-	void calculateDistance();
+	void calculateDistance(int** adjMatrix);
 	/*
 	* Function output prints the results
 	*/
@@ -46,36 +59,49 @@ public:
 	void printPath(int);
 };
 
-void Dijkstra::read(){
-	cout << "Enter the number of vertices of the graph(should be > 0)\n";
-	cin >> numOfVertices;
-	while (numOfVertices <= 0) {
-		cout << "Enter the number of vertices of the graph(should be > 0)\n";
-		cin >> numOfVertices;
+int** Dijkstra::read(){
+	cout << "Reading Data" << endl;
+
+	char* inname = "random_terrain_1.txt";
+	int weight;
+	int vertexKey;
+	ifstream infile(inname);
+	if (!inname) {
+		cout << "Problem opening file." << endl;
 	}
-	cout << "Enter the adjacency matrix for the graph\n";
-	cout << "To enter infinity enter " << INFINITY << endl;
-	for (int i = 0; i < numOfVertices; i++) {
-		cout << "Enter the (+ve)weights for the row " << i << endl;
-		for (int j = 0; j < numOfVertices; j++) {
-			cin >> adjMatrix[i][j];
-			while (adjMatrix[i][j] < 0) {
-				cout << "Weights should be +ve. Enter the weight again\n";
-				cin >> adjMatrix[i][j];
-			}
+
+	infile >> cols;
+	infile >> rows;
+
+	cout << cols << " " << rows << endl;
+	//fscanf(fp, "%d,%d" &cols, &rows);
+
+	int** adjMatrix = new int*[cols];
+	for (int i = 0; i < cols; i++)
+		adjMatrix[i] = new int[rows];
+
+	for (int i = 0; i < cols; i++)
+	{
+		for (int j = 0; j < rows; j++)
+		{
+			infile >> weight;
+			adjMatrix[i][j] = weight;
 		}
 	}
-	cout << "Enter the source vertex\n";
-	cin >> source;
-	while ((source<0) && (source>numOfVertices - 1)) {
-		cout << "Source vertex should be between 0 and" << numOfVertices - 1 << endl;
-		cout << "Enter the source vertex again\n";
-		cin >> source;
-	}
+
+	infile.close();
+	cout << "Finished reading data" << endl;
+	return adjMatrix;
 }
 
+
 void Dijkstra::initialize(){
-	for (int i = 0; i < numOfVertices; i++) {
+	distance = new int[128];
+	predecessor = new int[128];
+	mark = new bool[128];
+	source = 1; //starting node
+
+	for (int i = 0; i < vertices; i++) {
 		mark[i] = false;
 		predecessor[i] = -1;
 		distance[i] = INFINITY;
@@ -86,7 +112,7 @@ void Dijkstra::initialize(){
 int Dijkstra::getClosestUnmarkedNode(){
 	int minDistance = INFINITY;
 	int closestUnmarkedNode;
-	for (int i = 0; i < numOfVertices; i++) {
+	for (int i = 0; i < vertices; i++) {
 		if ((!mark[i]) && (minDistance >= distance[i])) {
 			minDistance = distance[i];
 			closestUnmarkedNode = i;
@@ -95,15 +121,20 @@ int Dijkstra::getClosestUnmarkedNode(){
 	return closestUnmarkedNode;
 }
 
-void Dijkstra::calculateDistance(){
+void Dijkstra::calculateDistance(int ** adjMatrix){
 	initialize();
+
+	cout << "Starting calculation" << endl;
+
 	int minDistance = INFINITY;
 	int closestUnmarkedNode;
 	int count = 0;
-	while (count < numOfVertices) {
+	while (count < vertices) {
 		closestUnmarkedNode = getClosestUnmarkedNode();
 		mark[closestUnmarkedNode] = true;
-		for (int i = 0; i<numOfVertices; i++) {
+//omg, increases time
+#pragma omp parallel for 
+		for (int i = 0; i < vertices; i++) {
 			if ((!mark[i]) && (adjMatrix[closestUnmarkedNode][i]>0)) {
 				if (distance[i] > distance[closestUnmarkedNode] + adjMatrix[closestUnmarkedNode][i]) {
 					distance[i] = distance[closestUnmarkedNode] + adjMatrix[closestUnmarkedNode][i];
@@ -119,17 +150,18 @@ void Dijkstra::printPath(int node){
 	if (node == source)
 		cout << (char)(node + 97) << "..";
 	else if (predecessor[node] == -1)
-		cout << "No path from “<<source<<”to " << (char)(node + 97) << endl;
+		cout << "No path from " << source << "to " << node << endl;
 	else {
 		printPath(predecessor[node]);
-		cout << (char)(node + 97) << "..";
+		cout << node << "..";
 	}
 }
 
 void Dijkstra::output(){
-	for (int i = 0; i < numOfVertices; i++) {
+	cout << "Printing output" << endl;
+	for (int i = 0; i < 128; i++) {
 		if (i == source)
-			cout << (char)(source + 97) << ".." << source;
+			cout << source << ".." << source;
 		else
 			printPath(i);
 		cout << "->" << distance[i] << endl;
@@ -141,14 +173,14 @@ int main(){
 	clock_t start, end;
 
 	Dijkstra G;
-	G.read();
+	int** matrix = G.read();
 	start = clock();
-	G.calculateDistance();
+	G.calculateDistance(matrix);
 	end = clock();
 	G.output();
 
-	cout << "Execution Time: " << (double)(end - start)/CLOCKS_PER_SEC << " seconds" << endl;
-	cout << "Enter a character + ENTER to exit: ";
+	cout << "\nExecution Time: " << (double)(end - start)/CLOCKS_PER_SEC << " seconds" << endl;
+	cout << "Enter a character to exit: ";
 	cin >> c;
 	return 0;
 }

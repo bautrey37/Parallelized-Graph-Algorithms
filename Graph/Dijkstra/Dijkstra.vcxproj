@@ -85,6 +85,9 @@
   <ItemGroup>
     <ClInclude Include="InputData.h" />
   </ItemGroup>
+  <ItemGroup>
+    <Text Include="random_terrain_1.txt" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
