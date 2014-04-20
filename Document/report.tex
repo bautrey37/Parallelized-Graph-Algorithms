@@ -166,7 +166,7 @@ blue area emanating from the target node \cite{Chang-2009-shortestPath}.
 Once they find a meeting point, the path has been calculated and the
 search stops. 
 
-\includegraphics[scale=0.8,bb = 0 0 200 100, draft, type=eps]{D:/Dropbox/Parallel Programming Project/Anthony/bidirectionaldijkstra.png}
+\includegraphics[scale=0.8]{\string"D:/Dropbox/Parallel Programming Project/Anthony/Images for Reports-Presentation/bidirectionaldijkstra\string".eps}
 
 The A{*} algorithm is essentially Dijkstra\textquoteright{}s algorithm
 with an admissible heuristic (also called an optimistic heuristic)
@@ -177,7 +177,7 @@ cost) \cite{Eranki-2002-Astar}. The following image is the same network
 but now with a bidirectional A{*} algorithm performed along with precalculated
 landmarks \cite{Eranki-2002-Astar}.
 
-\includegraphics[clip,scale=0.8,bb = 0 0 200 100, draft, type=eps]{D:/Dropbox/Parallel Programming Project/Anthony/astar-landmarks.png}
+\includegraphics[clip,scale=0.8]{\string"D:/Dropbox/Parallel Programming Project/Anthony/Images for Reports-Presentation/astar-landmarks\string".eps}
 
 Though this implementation of the A{*} algorithm also involves precalculated
 landmarks, the reader can see that a great deal of computation and
@@ -191,13 +191,21 @@ Dijkstra\textquoteright{}s.
 
 \subsection{Parallel Dijkstra Algorithm}
 
-The Dijkstra\textquoteright{}s algorithm finds the shortest path from
-the starting vertex to other vertices in the weighted graph. This
-algorithm keeps two sets, the set of nodes it has already checked
-and the set of nodes that it has not checked. When searching the algorithm
-searches every neighboring vertex from the previously checked vertex.
-This results in checking every vertex in a circle almost, until the
-destination vertex is found. 
+The Dijkstra\textquoteright{}s algorithm is a graph search algorithm
+that involves finding the single-source shortest path with a graph
+of non-negative weights. It is widely used in applications where the
+destination node is not necessary known before the algorithms starts.
+An application is for finding routes within networks. This algorithm
+keeps two sets, the set of nodes it has already checked and the set
+of nodes that it has not checked. When searching the algorithm searches
+every neighboring vertex from the previously checked vertex. This
+results in checking every vertex in a circle almost, until the destination
+vertex is found. The approach used was to parallelize Dijkstra was
+to distribute the threads along the current source node to find the
+closest neighboring node with the least weight value. The least weight
+is then distributed to to the other nodes and then the source node
+is updated to be the least weight. This is continued until the destination
+node is found or until all the nodes in the graph are searched. 
 
 
 \subsection{Parallel A{*} Algorithm}
@@ -266,54 +274,98 @@ will result in an optimized runtime of the algorithm on large datasets.
 
 \section{Experimentation and Testing}
 
+A paper written by Luis Henrique Oliveira Rios and Luiz Chaimowicz
+of the Department of Computer Science of Federal University of Minas
+Gerais in Brazil suggests a method of parallelizing the A Star search
+algorithm that uses a bidirectional search, much like our proposed
+method. Their version, called Parallel New Bidirectional A{*} \cite{riospnba},
+proposes that rather than having an 'open Nodes' priority queue that
+contains the nodes on the frontier, each of two threads (one starting
+at the goal toward the starting node and the other from the starting
+node to the goal node) contains its own open Nodes priority queue.
+Additionally, each thread maintains its own F, G, and H function values
+for its nodes, but instead of holding an array for \textquoteleft{}closed
+Nodes\textquoteright{} that holds the Nodes that have already been
+expanded, the two threads have shared access to a set of nodes, M,
+that contains all the Nodes that are \textquotedblleft{}in the middle\textquotedblright{}.
+Initially, all of the nodes are placed in this set, M, and as they
+are expanded (meaning, their neighbors are visited and exhausted),
+they are removed from the set M. L is also a variable that is shared
+by both threads - it is also read and written by both threads. It
+represents the cost of the best solution found by the algorithm so
+far and is initialized with the value of infinity. The source code
+available in the paper which was cited is represented by the pseudocode
+pictured below. In this other paper, the group used the C++ programming
+language along with the pthreads library. 
 
-\section{Conclusions}
+\includegraphics[scale=0.8]{\string"D:/Dropbox/Parallel Programming Project/PNBA\string".eps}
 
-{*}{*} A recap of the algorithms and how their parallelized versions
-are different from their serial counterparts, and then a discussion
-of how our implementations were similar to and differed from publicly
-known parallelized versions. {*}{*} 
+In this paper\textquoteright{}s implementation, the Java programming
+language was used with its own natural threading capability. Two threads
+were created much like the pseudocode above suggests, with all subscripts
+(\textquoteleft{}1s\textquoteright{} and \textquoteleft{}2s\textquoteright{})
+switching (becoming \textquoteleft{}2s\textquoteright{} and \textquoteleft{}1s\textquoteright{})
+for the opposite thread (thread 1 starting from the start node and
+seeking the goal node, and thread 2 starting from the goal node and
+seeking the start node). 
 
+The termination condition is that there are no more Nodes in the shared
+M set of \textquotedblleft{}middle Nodes\textquotedblright{} - this
+is admissible because even if a node is searched twice by both threads,
+the search is guaranteed to choose the Nodes that lead to the smallest
+L value. 
 
-\section{Future Directions}
+Unfortunately, the implementations of the above pseudocode proved
+to perform worse than their serial, unidirectional counterparts. This
+may be due to the overhead of creating the Threads initially, or locking
+the critical section with a Semaphore. Or, this may have had to do
+with the fact that the shared variables M and L were being accessed
+by the threads by a much larger component that was passed into the
+Threads as arguments, and was set to volatile. Such a large component
+(the GraphGUI class itself) with so many intricate, threaded parts
+(it also handled the GUI creation, so painting and repainting the
+screen) probably should not have been treated as volatile. Most likely
+the speed decrease was due to the reasons above, but otherwise it
+seems, logically, that the implementation of the pseudocode above
+should have been sound otherwise. The next several images will showcase
+the decrease in speed, as opposed to the expected increase that parallelizing
+the A{*} algorithm should have produced.
 
-{*}{*} OpenMP vs CUDA or OpenCL OpenMP + MPI to increases parallelism
-{*}{*} 
+\includegraphics[scale=0.3]{\string"D:/Dropbox/Parallel Programming Project/serialAStar\string".eps}
 
+As the reader will note, the A{*} search started in the middle of
+the graph and the goal node was in the bottom right corner. The red
+lines represent failed paths, whereas the black line represents the
+actual shortest path computed. At the bottom of the GUI window note
+that the execution time (of the actual A{*} algorithm itself, and
+not in drawing to the GUI) is approximately 0.4477 seconds. The equivalent
+parallelized A{*} search with the same starting and ending Node is
+pictured below. 
 
-\appendix{}
+The reader will now note that the search space has increased slightly
+(because the goal node is now seeking the start node as well, so it
+searches around itself), and the path is visibly incorrect. The process
+for drawing the path became disjoint, but the portion going from the
+goal node to the start node is correct. 
 
+\includegraphics[scale=0.3]{\string"D:/Dropbox/Parallel Programming Project/parallelAStar\string".eps}
 
-\section{Appendix}
+Also of interest is that the execution time (simply for A{*} and not
+for drawing the GUI), is now 2.9745 seconds, and in the console window
+you can see the time taken by BOTH threads is greater than the time
+the single, unidirectional A{*} search endured. 
 
+\includegraphics[scale=0.3]{\string"D:/Dropbox/Parallel Programming Project/serialDijkstra\string".eps}
 
-\subsection{Completed}
-\begin{itemize}
-\item Figuring out how to share the graph for all threads
-\item Learning OpenMP 
-\end{itemize}
+Recall that A{*} search becomes equivalent to Dijkstra\textquoteright{}s
+search algorithm when the heuristic is set to 0. Above you can not
+that Dijkstra\textquoteright{}s takes approximately .7 seconds when
+executed serially. However, as the picture below will attest, it took
+almost one order of magnitude longer (4.39 seconds) for the two threads
+to execute. 
 
-\subsection{Completed Tasks}
-\begin{itemize}
-\item Serial version of A{*} algorithm
-\item Read articles on parallel algorithms, OpenMP, and parallel programming 
-\end{itemize}
+\includegraphics[scale=0.3]{\string"D:/Dropbox/Parallel Programming Project/ParallelDijkstra\string".eps}
 
-\subsection{Remaining Tasks}
-\begin{itemize}
-\item Parallelize all three algorithms 
-\item Write working serial Dijkstra and Bellman Ford 
-\item Find and write other working parallel algorithms 
-\item Incorporate into real applications 
-
-\begin{itemize}
-\item Generated graphs 
-\item Roadmaps/City traffic (real data) 
-\item Terrain Maps (real data) 
-\end{itemize}
-\item Experiment and document results 
-\item Make graphs comparing performance 
-\end{itemize}
 \bibliographystyle{IEEEtran}
 \bibliography{report_ref}
 

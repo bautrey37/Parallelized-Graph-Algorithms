@@ -375,7 +375,7 @@ key "Chang-2009-shortestPath"
 
 \begin_layout Standard
 \begin_inset Graphics
-	filename D:/Dropbox/Parallel Programming Project/Anthony/bidirectionaldijkstra.png
+	filename D:/Dropbox/Parallel Programming Project/Anthony/Images for Reports-Presentation/bidirectionaldijkstra.png
 	scale 80
 
 \end_inset
@@ -409,7 +409,7 @@ key "Eranki-2002-Astar"
 
 \begin_layout Standard
 \begin_inset Graphics
-	filename D:/Dropbox/Parallel Programming Project/Anthony/astar-landmarks.png
+	filename D:/Dropbox/Parallel Programming Project/Anthony/Images for Reports-Presentation/astar-landmarks.png
 	scale 80
 	clip
 
@@ -434,14 +434,24 @@ Parallel Dijkstra Algorithm
 \end_layout
 
 \begin_layout Standard
-The Dijkstra’s algorithm finds the shortest path from the starting vertex
- to other vertices in the weighted graph.
+The Dijkstra’s algorithm is a graph search algorithm that involves finding
+ the single-source shortest path with a graph of non-negative weights.
+ It is widely used in applications where the destination node is not necessary
+ known before the algorithms starts.
+ An application is for finding routes within networks.
  This algorithm keeps two sets, the set of nodes it has already checked
  and the set of nodes that it has not checked.
  When searching the algorithm searches every neighboring vertex from the
  previously checked vertex.
  This results in checking every vertex in a circle almost, until the destination
  vertex is found.
+ The approach used was to parallelize Dijkstra was to distribute the threads
+ along the current source node to find the closest neighboring node with
+ the least weight value.
+ The least weight is then distributed to to the other nodes and then the
+ source node is updated to be the least weight.
+ This is continued until the destination node is found or until all the
+ nodes in the graph are searched.
  
 \end_layout
 
@@ -522,97 +532,167 @@ Parallel Bellman-Ford Algorithm
 Experimentation and Testing
 \end_layout
 
-\begin_layout Section
-Conclusions
+\begin_layout Standard
+A paper written by Luis Henrique Oliveira Rios and Luiz Chaimowicz of the
+ Department of Computer Science of Federal University of Minas Gerais in
+ Brazil suggests a method of parallelizing the A Star search algorithm that
+ uses a bidirectional search, much like our proposed method.
+ Their version, called Parallel New Bidirectional A* 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "riospnba"
+
+\end_inset
+
+, proposes that rather than having an 'open Nodes' priority queue that contains
+ the nodes on the frontier, each of two threads (one starting at the goal
+ toward the starting node and the other from the starting node to the goal
+ node) contains its own open Nodes priority queue.
+ Additionally, each thread maintains its own F, G, and H function values
+ for its nodes, but instead of holding an array for ‘closed Nodes’ that
+ holds the Nodes that have already been expanded, the two threads have shared
+ access to a set of nodes, M, that contains all the Nodes that are “in the
+ middle”.
+ Initially, all of the nodes are placed in this set, M, and as they are
+ expanded (meaning, their neighbors are visited and exhausted), they are
+ removed from the set M.
+ L is also a variable that is shared by both threads - it is also read and
+ written by both threads.
+ It represents the cost of the best solution found by the algorithm so far
+ and is initialized with the value of infinity.
+ The source code available in the paper which was cited is represented by
+ the pseudocode pictured below.
+ In this other paper, the group used the C++ programming language along
+ with the pthreads library.
+ 
 \end_layout
 
 \begin_layout Standard
-** A recap of the algorithms and how their parallelized versions are different
- from their serial counterparts, and then a discussion of how our implementation
-s were similar to and differed from publicly known parallelized versions.
- ** 
-\end_layout
+\begin_inset Graphics
+	filename D:/Dropbox/Parallel Programming Project/PNBA.png
+	scale 80
 
-\begin_layout Section
-Future Directions
+\end_inset
+
+
 \end_layout
 
 \begin_layout Standard
-** OpenMP vs CUDA or OpenCL OpenMP + MPI to increases parallelism ** 
+In this paper’s implementation, the Java programming language was used with
+ its own natural threading capability.
+ Two threads were created much like the pseudocode above suggests, with
+ all subscripts (‘1s’ and ‘2s’) switching (becoming ‘2s’ and ‘1s’) for the
+ opposite thread (thread 1 starting from the start node and seeking the
+ goal node, and thread 2 starting from the goal node and seeking the start
+ node).
+ 
 \end_layout
 
-\begin_layout Appendix
+\begin_layout Standard
+The termination condition is that there are no more Nodes in the shared
+ M set of “middle Nodes” - this is admissible because even if a node is
+ searched twice by both threads, the search is guaranteed to choose the
+ Nodes that lead to the smallest L value.
+ 
+\end_layout
+
+\begin_layout Standard
+Unfortunately, the implementations of the above pseudocode proved to perform
+ worse than their serial, unidirectional counterparts.
+ This may be due to the overhead of creating the Threads initially, or locking
+ the critical section with a Semaphore.
+ Or, this may have had to do with the fact that the shared variables M and
+ L were being accessed by the threads by a much larger component that was
+ passed into the Threads as arguments, and was set to volatile.
+ Such a large component (the GraphGUI class itself) with so many intricate,
+ threaded parts (it also handled the GUI creation, so painting and repainting
+ the screen) probably should not have been treated as volatile.
+ Most likely the speed decrease was due to the reasons above, but otherwise
+ it seems, logically, that the implementation of the pseudocode above should
+ have been sound otherwise.
+ The next several images will showcase the decrease in speed, as opposed
+ to the expected increase that parallelizing the A* algorithm should have
+ produced.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Graphics
+	filename D:/Dropbox/Parallel Programming Project/serialAStar.png
+	scale 30
+
+\end_inset
+
 
 \end_layout
 
-\begin_layout Section
-Appendix
+\begin_layout Standard
+As the reader will note, the A* search started in the middle of the graph
+ and the goal node was in the bottom right corner.
+ The red lines represent failed paths, whereas the black line represents
+ the actual shortest path computed.
+ At the bottom of the GUI window note that the execution time (of the actual
+ A* algorithm itself, and not in drawing to the GUI) is approximately 0.4477
+ seconds.
+ The equivalent parallelized A* search with the same starting and ending
+ Node is pictured below.
+ 
 \end_layout
 
-\begin_layout Subsection
-Completed
+\begin_layout Standard
+The reader will now note that the search space has increased slightly (because
+ the goal node is now seeking the start node as well, so it searches around
+ itself), and the path is visibly incorrect.
+ The process for drawing the path became disjoint, but the portion going
+ from the goal node to the start node is correct.
+ 
 \end_layout
 
-\begin_layout Itemize
-Figuring out how to share the graph for all threads
+\begin_layout Standard
+\begin_inset Graphics
+	filename D:/Dropbox/Parallel Programming Project/parallelAStar.png
+	scale 30
+
+\end_inset
+
+
 \end_layout
 
-\begin_layout Itemize
-Learning OpenMP 
+\begin_layout Standard
+Also of interest is that the execution time (simply for A* and not for drawing
+ the GUI), is now 2.9745 seconds, and in the console window you can see the
+ time taken by BOTH threads is greater than the time the single, unidirectional
+ A* search endured.
+ 
 \end_layout
 
-\begin_layout Subsection
-Completed Tasks
+\begin_layout Standard
+\begin_inset Graphics
+	filename D:/Dropbox/Parallel Programming Project/serialDijkstra.png
+	scale 30
+
+\end_inset
+
+
 \end_layout
 
-\begin_layout Itemize
-Serial version of A* algorithm
+\begin_layout Standard
+Recall that A* search becomes equivalent to Dijkstra’s search algorithm
+ when the heuristic is set to 0.
+ Above you can not that Dijkstra’s takes approximately .7 seconds when executed
+ serially.
+ However, as the picture below will attest, it took almost one order of
+ magnitude longer (4.39 seconds) for the two threads to execute.
+ 
 \end_layout
 
-\begin_layout Itemize
-Read articles on parallel algorithms, OpenMP, and parallel programming 
-\end_layout
+\begin_layout Standard
+\begin_inset Graphics
+	filename D:/Dropbox/Parallel Programming Project/ParallelDijkstra.png
+	scale 30
 
-\begin_layout Subsection
-Remaining Tasks
-\end_layout
+\end_inset
 
-\begin_layout Itemize
-Parallelize all three algorithms 
-\end_layout
 
-\begin_layout Itemize
-Write working serial Dijkstra and Bellman Ford 
-\end_layout
-
-\begin_layout Itemize
-Find and write other working parallel algorithms 
-\end_layout
-
-\begin_layout Itemize
-Incorporate into real applications 
-\end_layout
-
-\begin_deeper
-\begin_layout Itemize
-Generated graphs 
-\end_layout
-
-\begin_layout Itemize
-Roadmaps/City traffic (real data) 
-\end_layout
-
-\begin_layout Itemize
-Terrain Maps (real data) 
-\end_layout
-
-\end_deeper
-\begin_layout Itemize
-Experiment and document results 
-\end_layout
-
-\begin_layout Itemize
-Make graphs comparing performance 
 \end_layout
 
 \begin_layout Standard
